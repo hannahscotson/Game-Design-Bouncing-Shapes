@@ -4,7 +4,7 @@ In this assignment you will be writing a C++/SFML program which will read
 descriptions of shapes from a configuration file, and then drawing those shapes
 to the screen. Each shape will have a name, position, speed, color, as well as
 properties unique to each shape type. For example, a Rectangle will have width
-and height, and a circle will have a Radius. For this assignment, the position
+and height, and a circle will have a radius. For this assignment, the position
 of a shape refers to its SFML default of the upper-left corner of the shape.
 
 You are also required to make these shapes "bounce" off the sides of the window
