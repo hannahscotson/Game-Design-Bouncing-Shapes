@@ -1,5 +1,62 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
+#include <vector>
+
+struct MyShape {
+	sf::CircleShape circle;
+	sf::RectangleShape rect;
+	sf::Text text;
+	float speedX;
+	float speedY;
+	bool isCircle;
+
+	// Constructor
+	MyShape(std::string name, sf::Font& font, sf::Color col, float x, float y, float sx, float sy, bool circleMode)
+	{
+		isCircle = circleMode;
+		speedX = sx;
+		speedY = sy;
+
+		// Setup the text
+		text = sf::Text(name, font, 18);
+		// Centre text on shape
+		sf::FloatRect bounds = text.getLocalBounds();
+		text.setOrigin(bounds.left + bounds.width / 2.0f,
+					   bounds.top + bounds.height / 2.0f);
+
+		// Setup the shapes
+		if (isCircle) {
+			circle.setRadius(50.0f);
+			circle.setFillColor(col);
+			circle.setPosition(x, y);
+		}
+		else {
+			rect.setSize(sf::Vector2f(100.0f, 100.0f));
+			rect.setFillColor(col);
+			rect.setPosition(x, y);
+		}
+	}
+
+	void update()
+	{
+		// Move shape
+		if (isCircle) circle.move(speedX, speedY);
+		else rect.move(speedX, speedY);
+
+		// Move text with shape (centred)
+		sf::FloatRect shapeBounds = isCircle ? circle.getGlobalBounds() : rect.getGlobalBounds();
+		text.setPosition(shapeBounds.left + shapeBounds.width / 2.0f,
+						 shapeBounds.top + shapeBounds.height / 2.0f);
+	}
+
+	void draw(sf::RenderWindow& window)
+	{
+		if (isCircle) window.draw(circle);
+		else window.draw(rect);
+		window.draw(text);
+	}
+
+};
 
 int main(int argc, char* argv[])
 {
@@ -7,34 +64,6 @@ int main(int argc, char* argv[])
 	const int wWidth = 800, wHeight = 600;
 	sf::RenderWindow window(sf::VideoMode(wWidth, wHeight), "Bouncing Shapes");
 	window.setFramerateLimit(60); // 60 FPS
-
-	// Create Circles
-	sf::CircleShape CGreen(50);
-	CGreen.setFillColor(sf::Color::Green);
-	CGreen.setPosition(100.0f, 100.0f);
-	float circleMoveSpeed = 1.0f;
-
-	sf::CircleShape CBlue(100);
-	CBlue.setFillColor(sf::Color::Blue);
-	CBlue.setPosition(200, 200);
-
-	sf::CircleShape CPurple(75);
-	CPurple.setFillColor(sf::Color::Magenta);
-	CPurple.setPosition(300, 300);
-
-	// Create Rectangles
-	sf::RectangleShape RRed(sf::Vector2f(200, 25));
-	RRed.setFillColor(sf::Color(255, 0, 0));
-	RRed.setPosition(200, 200);
-	float rectangleMoveSpeed_x = 1.0f;
-
-	sf::RectangleShape RGrey(sf::Vector2f(50, 100));
-	RGrey.setFillColor(sf::Color(100, 100, 100));
-	RGrey.setPosition(300, 250);
-
-	sf::RectangleShape RTeal(sf::Vector2f(100, 100));
-	RTeal.setFillColor(sf::Color(0, 255, 255));
-	RTeal.setPosition(25, 100);
 
 	// Load a font to display text
 	sf::Font myFont;
@@ -47,17 +76,18 @@ int main(int argc, char* argv[])
 		exit(-1);
 	}
 
-	std::vector<sf::CircleShape> circles;
-	for (auto& circle : circles)
-	{
-		circles.push_back(circle);
-	}
+	// Create a list to contain all shapes
+	std::vector<MyShape> shapes;
 
-	std::vector<sf::RectangleShape> rectangles;
-	for (auto& rectangle : rectangles)
-	{
-		rectangles.push_back(rectangle);
-	}
+	// Create Circles
+	shapes.push_back(MyShape("CGreen", myFont, sf::Color::Green, 100.0f, 100.0f, -0.03f, 0.02f, true));
+	shapes.push_back(MyShape("CBlue", myFont, sf::Color::Blue, 200.0f, 200.0f, 0.02f, 0.04f, true));
+	shapes.push_back(MyShape("CPurple", myFont, sf::Color::Magenta, 300.0f, 300.0f, -0.02f, -0.01f, true));
+
+	// Create Rectangles
+	shapes.push_back(MyShape("RRed", myFont, sf::Color::Red, 200.0f, 200.0f, 0.1f, 0.15f, false));
+	shapes.push_back(MyShape("RGrey", myFont, sf::Color(100, 100, 100), 300.0f, 250.0f, -0.02f, 0.02f, false));
+	shapes.push_back(MyShape("RTeal", myFont, sf::Color(0, 255, 255), 25.0f, 100.0f, -0.02f, -0.02f, false));
 
 	// Main loop - continues for each frame while window is open
 	while (window.isOpen())
@@ -73,31 +103,14 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		// Basic animation - move the shape each frame if it's still in frame
-		float sx = -0.03, sy = 0.02;
-		CGreen.setPosition(CGreen.getPosition().x + sx, CGreen.getPosition().y + sy);
-		sx = 0.02, sy = 0.04;
-		CBlue.setPosition(CBlue.getPosition().x + sx, CBlue.getPosition().y + sy);
-		sx = -0.02, sy = -0.01;
-		CPurple.setPosition(CPurple.getPosition().x + sx, CPurple.getPosition().y + sy);
-
-		sx = 0.1, sy = 0.15;
-		RRed.setPosition(RRed.getPosition().x + sx, RRed.getPosition().y + sy);
-		sx = -0.02, sy = 0.02;
-		RGrey.setPosition(RGrey.getPosition().x + sx, RGrey.getPosition().y + sy);
-		sx = -0.02, sy = -0.02;
-		RTeal.setPosition(RTeal.getPosition().x + sx, RTeal.getPosition().y + sy);
-
 		// Basic rendering function calls
 		window.clear();	
 
-		window.draw(CGreen);
-		window.draw(CBlue);
-		window.draw(CPurple);
-
-		window.draw(RRed);
-		window.draw(RGrey);
-		window.draw(RTeal);
+		for (auto& shape : shapes)
+		{
+			shape.update();
+			shape.draw(window);
+		}
 
 		window.display();
 	}
