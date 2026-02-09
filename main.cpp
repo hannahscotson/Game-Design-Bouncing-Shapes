@@ -1,5 +1,6 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
+#include <fstream>
 #include <vector>
 
 struct MyShape {
@@ -10,41 +11,59 @@ struct MyShape {
 	float speedY;
 	bool isCircle;
 
-	// Constructor
-	MyShape(std::string name, sf::Font& font, sf::Color col, float x, float y, float sx, float sy, bool circleMode)
+	// Circle Constructor
+	MyShape(std::string name, const sf::Font& font, int fSize, sf::Color fCol,
+		float x, float y, float sx, float sy, int r, int g, int b, float radius)
+		: speedX(sx), speedY(sy), isCircle(true)
 	{
-		isCircle = circleMode;
-		speedX = sx;
-		speedY = sy;
-
-		// Setup the text
-		text = sf::Text(name, font, 18);
-		// Centre text on shape
-		sf::FloatRect bounds = text.getLocalBounds();
-		text.setOrigin(bounds.left + bounds.width / 2.0f,
-					   bounds.top + bounds.height / 2.0f);
-
-		// Setup the shapes
-		if (isCircle) {
-			circle.setRadius(50.0f);
-			circle.setFillColor(col);
-			circle.setPosition(x, y);
-		}
-		else {
-			rect.setSize(sf::Vector2f(100.0f, 100.0f));
-			rect.setFillColor(col);
-			rect.setPosition(x, y);
-		}
+		circle.setRadius(radius);
+		circle.setPosition(x, y);
+		circle.setFillColor(sf::Color(r, g, b));
+		setupText(name, font, fSize, fCol);
 	}
 
-	void update()
+	// Rectangle Constructor
+	MyShape(std::string name, const sf::Font& font, int fSize, sf::Color fCol,
+		float x, float y, float sx, float sy, int r, int g, int b, float w, float h)
+		: speedX(sx), speedY(sy), isCircle(false)
+	{
+		rect.setSize({ w, h });
+		rect.setPosition(x, y);
+		rect.setFillColor(sf::Color(r, g, b));
+		setupText(name, font, fSize, fCol);
+	}
+
+	void setupText(std::string name, const sf::Font& font, int size, sf::Color color) {
+		text.setString(name);
+		text.setFont(font);
+		text.setCharacterSize(size);
+		text.setFillColor(color);
+		sf::FloatRect bounds = text.getLocalBounds();
+		text.setOrigin(bounds.left + bounds.width / 2.0f, bounds.top + bounds.height / 2.0f);
+	}
+
+	void update(int windowWidth, int windowHeight)
 	{
 		// Move shape
 		if (isCircle) circle.move(speedX, speedY);
 		else rect.move(speedX, speedY);
 
-		// Move text with shape (centred)
+		// Get the current boundaries of the shape
 		sf::FloatRect shapeBounds = isCircle ? circle.getGlobalBounds() : rect.getGlobalBounds();
+
+		// Check left/right collisions
+		if (shapeBounds.left <= 0 || shapeBounds.left + shapeBounds.width >= windowWidth)
+		{
+			speedX *= -1;
+		}
+
+		// Check top/bottom collisions
+		if (shapeBounds.top <= 0 || shapeBounds.top + shapeBounds.height >= windowHeight)
+		{
+			speedY *= -1;
+		}
+
+		// Move text with shape (centred)
 		text.setPosition(shapeBounds.left + shapeBounds.width / 2.0f,
 						 shapeBounds.top + shapeBounds.height / 2.0f);
 	}
@@ -60,34 +79,59 @@ struct MyShape {
 
 int main(int argc, char* argv[])
 {
-	// Create a new window of size 800 x 600
-	const int wWidth = 800, wHeight = 600;
-	sf::RenderWindow window(sf::VideoMode(wWidth, wHeight), "Bouncing Shapes");
-	window.setFramerateLimit(60); // 60 FPS
-
-	// Load a font to display text
-	sf::Font myFont;
-
-	// Attempt to load the font from a file
-	if (!myFont.loadFromFile("RobotoRegular-3m4L.ttf"))
+	std::ifstream file("config.txt");
+	if (!file.is_open())
 	{
-		// If can't load the font, print an error to the error console and exit
-		std::cerr << "Could not load font!\n";
-		exit(-1);
+		std::cerr << "Could not open cinfig file!\n";
+		return -1;
 	}
 
-	// Create a list to contain all shapes
+	// Default values in case file lines are missing
+	int wWidth = 1280, wHeight = 720;
+	sf::Font myFont;
+	int fontSize = 12;
+	sf::Color fontColor = sf::Color::White;
 	std::vector<MyShape> shapes;
 
-	// Create Circles
-	shapes.push_back(MyShape("CGreen", myFont, sf::Color::Green, 100.0f, 100.0f, -0.03f, 0.02f, true));
-	shapes.push_back(MyShape("CBlue", myFont, sf::Color::Blue, 200.0f, 200.0f, 0.02f, 0.04f, true));
-	shapes.push_back(MyShape("CPurple", myFont, sf::Color::Magenta, 300.0f, 300.0f, -0.02f, -0.01f, true));
+	std::string type;
+	while (file >> type)
+	{
+		if (type == "Window")
+		{
+			file >> wWidth >> wHeight;
+		}
+		else if (type == "Font")
+		{
+			std::string path;
+			int r, g, b;
+			file >> path >> fontSize >> r >> g >> b;
+			if (!myFont.loadFromFile("RobotoRegular-3m4L.ttf"))
+			{
+				std::cerr << "Font file not found: " << path << "\n";
+			}
+			fontColor = sf::Color(r, g, b);
+		}
+		else if (type == "Circle")
+		{
+			std::string name;
+			float x, y, sx, sy, radius;
+			int r, g, b;
+			file >> name >> x >> y >> sx >> sy >> r >> g >> b >> radius;
+			shapes.emplace_back(name, myFont, fontSize, fontColor, x, y, sx, sy, r, g, b, radius);
+		}
+		else if (type == "Rectangle")
+		{
+			float x, y, sx, sy, w, h;
+			int r, g, b;
+			std::string name;
+			file >> name >> x >> y >> sx >> sy >> r >> g >> b >> w >> h;
+			shapes.emplace_back(name, myFont, fontSize, fontColor, x, y, sx, sy, r, g, b, w, h);
+		}
+	}
 
-	// Create Rectangles
-	shapes.push_back(MyShape("RRed", myFont, sf::Color::Red, 200.0f, 200.0f, 0.1f, 0.15f, false));
-	shapes.push_back(MyShape("RGrey", myFont, sf::Color(100, 100, 100), 300.0f, 250.0f, -0.02f, 0.02f, false));
-	shapes.push_back(MyShape("RTeal", myFont, sf::Color(0, 255, 255), 25.0f, 100.0f, -0.02f, -0.02f, false));
+	// Create new window
+	sf::RenderWindow window(sf::VideoMode(wWidth, wHeight), "Bouncing Shapes");
+	window.setFramerateLimit(60); // 60 FPS
 
 	// Main loop - continues for each frame while window is open
 	while (window.isOpen())
@@ -108,7 +152,7 @@ int main(int argc, char* argv[])
 
 		for (auto& shape : shapes)
 		{
-			shape.update();
+			shape.update(wWidth, wHeight);
 			shape.draw(window);
 		}
 
