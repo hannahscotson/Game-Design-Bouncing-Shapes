@@ -11,7 +11,7 @@ struct MyShape {
 	float speedY;
 	bool isCircle;
 
-	// Circle Constructor
+	// Circle Constructor 
 	MyShape(std::string name, const sf::Font& font, int fSize, sf::Color fCol,
 		float x, float y, float sx, float sy, int r, int g, int b, float radius)
 		: speedX(sx), speedY(sy), isCircle(true)
